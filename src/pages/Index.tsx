@@ -3,7 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
 
 interface Item {
   id: number;
@@ -16,10 +20,13 @@ interface Item {
 }
 
 const Index = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'map' | 'catalog' | 'profile'>('map');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', category: 'Электроника', location: '' });
   
-  const [items] = useState<Item[]>([
+  const [items, setItems] = useState<Item[]>([
     {
       id: 1,
       name: 'Ноутбук MacBook Pro',
@@ -90,6 +97,36 @@ const Index = () => {
         item.location.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : items;
+
+  const handleAddItem = () => {
+    if (!newItem.name || !newItem.location) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все обязательные поля',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const item: Item = {
+      id: items.length + 1,
+      name: newItem.name,
+      category: newItem.category,
+      location: newItem.location,
+      coordinates: { lat: 55.7558 + Math.random() * 0.01, lng: 37.6173 + Math.random() * 0.01 },
+      image: '/placeholder.svg',
+      lastSeen: 'только что'
+    };
+
+    setItems([item, ...items]);
+    setIsAddDialogOpen(false);
+    setNewItem({ name: '', category: 'Электроника', location: '' });
+    
+    toast({
+      title: 'Успешно!',
+      description: `Вещь "${item.name}" добавлена в каталог`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0E27] via-[#1a1f3a] to-[#0A0E27] text-white">
@@ -280,7 +317,10 @@ const Index = () => {
                   Каталог вещей
                   <Badge variant="secondary" className="ml-2">{filteredItems.length}</Badge>
                 </h2>
-                <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 glow-effect">
+                <Button 
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 glow-effect"
+                  onClick={() => setIsAddDialogOpen(true)}
+                >
                   <Icon name="Plus" size={18} />
                   Добавить вещь
                 </Button>
@@ -361,6 +401,94 @@ const Index = () => {
           </nav>
         </div>
       </div>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="glass-effect border-white/20 bg-[#1a1f3a] text-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-heading flex items-center gap-2">
+              <Icon name="Plus" size={24} className="text-primary" />
+              Добавить новую вещь
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Заполните информацию о вещи для добавления в каталог с геолокацией
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium">
+                Название вещи *
+              </Label>
+              <Input
+                id="name"
+                placeholder="Например: Ноутбук MacBook Pro"
+                className="bg-white/5 border-white/10 h-12"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-medium">
+                Категория *
+              </Label>
+              <Select 
+                value={newItem.category} 
+                onValueChange={(value) => setNewItem({ ...newItem, category: value })}
+              >
+                <SelectTrigger className="bg-white/5 border-white/10 h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="glass-effect border-white/20 bg-[#1a1f3a]">
+                  <SelectItem value="Электроника">Электроника</SelectItem>
+                  <SelectItem value="Одежда">Одежда</SelectItem>
+                  <SelectItem value="Аксессуары">Аксессуары</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location" className="text-sm font-medium">
+                Местоположение *
+              </Label>
+              <Input
+                id="location"
+                placeholder="Например: Офис, стол 12"
+                className="bg-white/5 border-white/10 h-12"
+                value={newItem.location}
+                onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+              />
+            </div>
+
+            <div className="glass-effect rounded-xl p-4 flex items-start gap-3">
+              <Icon name="MapPin" size={20} className="text-primary mt-1" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Автоматическая геолокация</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Координаты будут определены автоматически на основе указанного местоположения
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              className="flex-1 border-white/20 hover:bg-white/10"
+              onClick={() => setIsAddDialogOpen(false)}
+            >
+              Отмена
+            </Button>
+            <Button 
+              className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90 glow-effect"
+              onClick={handleAddItem}
+            >
+              <Icon name="Check" size={18} />
+              Добавить вещь
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
